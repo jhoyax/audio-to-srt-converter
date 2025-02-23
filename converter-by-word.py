@@ -11,16 +11,25 @@ def transcribe_audio(audio_file):
     model = whisper.load_model("base")  # Load the Whisper model
     result = model.transcribe(audio_file)
 
-    # Create an SRT file for segment-based captions
+    # Create an SRT file for word-by-word captions
     with open(CAPTIONS_FILE, "w", encoding="utf-8") as srt_file:
-        for index, segment in enumerate(result["segments"], start=1):
-            start_time = format_timestamp(segment["start"])
-            end_time = format_timestamp(segment["end"])
-            text = segment["text"]
-            
-            srt_file.write(f"{index}\n{start_time} --> {end_time}\n{text}\n\n")
-    
-    print(f"Captions saved to {CAPTIONS_FILE}")
+        index = 1
+        for segment in result["segments"]:
+            start_time = segment["start"]
+            end_time = segment["end"]
+            words = segment["text"].split()  # Split the text into words
+            duration = (end_time - start_time) / len(words)  # Duration per word
+
+            # Assign timestamps to each word
+            for i, word in enumerate(words):
+                word_start = start_time + i * duration
+                word_end = word_start + duration
+                srt_file.write(
+                    f"{index}\n{format_timestamp(word_start)} --> {format_timestamp(word_end)}\n{word}\n\n"
+                )
+                index += 1
+
+    print(f"Word-by-word captions saved to {CAPTIONS_FILE}")
     return CAPTIONS_FILE
 
 # Helper: Format timestamp for SRT
